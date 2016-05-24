@@ -4,6 +4,14 @@
 
 How to read a web resource, and expose it as a stream of `String`s?
 
+## Getting started
+
+```
+$ sbt test
+```
+
+Note: The code does not currently compile. Asking for help in SO.
+
 ## Background
 
 Something like this is trivial with - say - Rx family of streaming.
@@ -15,3 +23,4 @@ One problem seems to be that HTTP part is in `akka-http`, streaming in `akka-str
 The role of this repo is to serve as a sample to get the code running. Once it is, it can serve as a sample to others.
 
 AKa240516
+
