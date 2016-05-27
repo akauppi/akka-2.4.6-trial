@@ -6,3 +6,7 @@ target/
 # IntelliJ IDEA
 #
 /.idea/
+
+# npm
+node_modules/
+

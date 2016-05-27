@@ -2,16 +2,18 @@ package test
 
 import java.net.URL
 
+import akka.NotUsed
 import akka.actor.ActorSystem
-import org.scalatest.{FlatSpec, Matchers}
-import akka.stream._
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.client.RequestBuilding._
+import akka.http.scaladsl.model.Uri
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl._
-import org.scalatest.concurrent.ScalaFutures
-import akka.testkit.TestProbe
-import sample._
+import akka.util.ByteString
 
-import scala.concurrent.Await
 import scala.concurrent.duration._
+import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.concurrent.ScalaFutures
 
 /*
 * References:
@@ -22,26 +24,38 @@ import scala.concurrent.duration._
 class SampleTest extends FlatSpec with Matchers with ScalaFutures {
   import SampleTest._
 
-  implicit val as = ActorSystem("Akka_Streams_QuickStart")
+  implicit val system = ActorSystem("SampleTest")
   implicit val materializer = ActorMaterializer()
 
-  implicit val ec = as.dispatcher
+  implicit val ec = system.dispatcher
 
-  behavior of "Fetching web page via 'akka-streams' and 'akka-http'"
+  behavior of "Fetching web page as a stream, via 'akka-http'"
 
-  it should "be possible to read a web resource, line by line" in {
-    val probe = TestProbe()
+  it should "be possible to read a web resource" in {
 
-    val sourceUnderTest: Source[String, Any] = Sample.sourceAsByteString(url).via(cutAtLines)
+    val delimiter: Flow[ByteString, ByteString, NotUsed] =
+      Framing.delimiter(
+        ByteString("\n"),   // could be "\r\n"
+        maximumFrameLength = 100000,
+        allowTruncation = true)
 
-    //...tbd...
-    //  Check that
-    //    - 1..n 'String's are provided
-    //    - none of them contains a newline
-    //    - print the beginning of the lines, to see they make sense
+    val f = Http().singleRequest(Get(uri)).flatMap { res =>
+      val lines = res.entity.dataBytes.via(delimiter).map(_.utf8String)
+      lines.runForeach { line =>
+        println( "::: line ::: "+ line )
+      }
+    }
+
+    f.foreach { _ =>
+      system.terminate()
+    }
+
+    Thread.sleep(5000)
   }
 }
 
 object SampleTest {
-  val url = new URL( "http://www.yle.fi" )
+  // Run 'npm serve data' to serve this file (see 'README.md').
+  //
+  val uri = Uri( "http://localhost:3000/a.txt" )
 }
